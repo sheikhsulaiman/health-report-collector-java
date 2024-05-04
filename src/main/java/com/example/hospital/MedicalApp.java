@@ -1,20 +1,23 @@
 package com.example.hospital;
+
+import com.example.hospital.models.Report;
+import com.example.hospital.models.User;
+import com.example.hospital.utils.DBUtils;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.sql.*;
 import java.util.Optional;
 
 public class MedicalApp extends Application {
+
+    DBUtils db = new DBUtils();
 
     private final TableView<Report> reportTableView = new TableView<>();
     private final TextArea detailsTextArea = new TextArea();
@@ -30,7 +33,7 @@ public class MedicalApp extends Application {
         reportTableView.getColumns().add(reportColumn);
 
         // Fetch reports from the database
-        ObservableList<Report> reports = fetchReportsFromDatabase();
+        ObservableList<Report> reports = db.fetchReportsFromDatabase();
 
         reportTableView.setItems(reports);
 
@@ -45,8 +48,14 @@ public class MedicalApp extends Application {
         Button newButton = new Button("New");
         newButton.setOnAction(e -> showNewReportDialog());
 
+        Button loginButton = new Button("LogIn");
+
+        loginButton.setOnAction(e -> showLoginDialog());
+
+
         HBox buttonContainer = new HBox();
-        buttonContainer.getChildren().add(newButton);
+        buttonContainer.getChildren().addAll(newButton,loginButton);
+        buttonContainer.setSpacing(10);
         buttonContainer.setPadding(new Insets(10));
 
         root.setLeft(tableContainer);
@@ -60,55 +69,28 @@ public class MedicalApp extends Application {
     }
 
 
-    // Method to fetch reports from the database
-    private ObservableList<Report> fetchReportsFromDatabase() {
-        ObservableList<Report> reports = FXCollections.observableArrayList();
-        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
-                "root", "");
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT report_text, report_date, users.* FROM report INNER JOIN users ON report.patient_id = users.id")) {
 
-            while (rs.next()) {
-                // Assuming Report and User classes have appropriate constructors
-                Report report = new Report(rs.getString("report_text"), rs.getDate("report_date"));
-                User user = new User(rs.getInt("id"), rs.getString("password"), rs.getString("type"),
-                        rs.getString("name"), rs.getString("email"), rs.getDate("dob"),
-                        rs.getString("phone"), rs.getString("blood_group"), rs.getString("address"));
-//                System.out.println(rs.getString("name"));
-                report.setUser(user);
-                reports.add(report);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return reports;
-    }
-
-    private void saveReportToDatabase(Report report){
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
-                    "root", "");
-            PreparedStatement stmt = conn.prepareStatement("INSERT INTO report (report_text, report_date, patient_id, doctor_id) VALUES (?, ?, ?, ?)");
-            stmt.setString(1, report.getReportText());
-            stmt.setDate(2, new Date(report.getReportDate().getTime()));
-            stmt.setInt(3, report.getPatientId());
-            stmt.setInt(4, report.getDoctorId());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-    }
 
     // Method to display report details in the TextArea
     private void showReportDetails(Report report) {
         if (report != null) {
             StringBuilder details = new StringBuilder();
-            details.append("Report Text: ").append(report.getReportText()).append("\n");
             details.append("Report Date: ").append(report.getReportDate()).append("\n");
-            if (report.getUser() != null) {
-                User user = report.getUser();
-                details.append("\nDetails:\n")
+            details.append("Report Text: ").append(report.getReportText()).append("\n");
+
+            if (report.getPatient() != null) {
+                User user = report.getPatient();
+                details.append("\nPatient's Details:\n")
+                        .append("Name: ").append(user.getName()).append("\n")
+                        .append("Email: ").append(user.getEmail()).append("\n")
+                        .append("Date of Birth: ").append(user.getDob()).append("\n")
+                        .append("Phone: ").append(user.getPhone()).append("\n")
+                        .append("Blood Group: ").append(user.getBloodGroup()).append("\n")
+                        .append("Address: ").append(user.getAddress()).append("\n");
+            }
+            if (report.getDoctor() != null) {
+                User user = report.getDoctor();
+                details.append("\nDoctor's Details:\n")
                         .append("Name: ").append(user.getName()).append("\n")
                         .append("Email: ").append(user.getEmail()).append("\n")
                         .append("Date of Birth: ").append(user.getDob()).append("\n")
@@ -188,164 +170,93 @@ public class MedicalApp extends Application {
         if (result.isPresent()) {
             Report newReport = result.get();
             // Save the new report to the database
-            saveReportToDatabase(newReport);
+            db.saveReportToDatabase(newReport);
             // Add the new report to the table view
             reportTableView.getItems().add(newReport);
             }
         // If user cancelled the dialog
     }
 
-    // Sample Report class
-    public static class Report {
-        private int doctorId;
-        private int patientId;
 
-        public int getDoctorId() {
-            return doctorId;
-        }
+    // Method to show a login dialog
+    private void showLoginDialog() {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Login");
+        dialog.setHeaderText("Doctor Login");
 
-        public void setDoctorId(int doctorId) {
-            this.doctorId = doctorId;
-        }
+        // Set the button types
+        ButtonType loginButtonType = new ButtonType("Login", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
 
-        public int getPatientId() {
-            return patientId;
-        }
+        // Create the username and password input fields
+        TextField usernameTextField = new TextField();
+        usernameTextField.setPromptText("Username (Email)");
 
-        public void setPatientId(int patientId) {
-            this.patientId = patientId;
-        }
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
 
-        private final String reportText;
-        private final Date reportDate;
-        private User user;
+        // Enable/Disable login button depending on whether username and password were entered
+        Button loginButton = (Button) dialog.getDialogPane().lookupButton(loginButtonType);
+        loginButton.setDisable(true);
 
-        public Report(String reportText, Date reportDate) {
-            this.reportText = reportText;
-            this.reportDate = reportDate;
-        }
+        // Do some validation (using lambda for simplicity)
+        usernameTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+            loginButton.setDisable(newValue.trim().isEmpty() || passwordField.getText().trim().isEmpty());
+        });
 
-        public String getReportText() {
-            return reportText;
-        }
+        passwordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            loginButton.setDisable(newValue.trim().isEmpty() || usernameTextField.getText().trim().isEmpty());
+        });
 
-        public Date getReportDate() {
-            return reportDate;
-        }
+        // Layout the dialog content
+        VBox content = new VBox();
+        content.getChildren().addAll(new Label("Username:"), usernameTextField,
+                new Label("Password:"), passwordField);
+        content.setSpacing(10);
+        content.setPadding(new Insets(20));
 
-        public User getUser() {
-            return user;
-        }
+        dialog.getDialogPane().setContent(content);
 
-        public void setUser(User user) {
-            this.user = user;
-        }
+        // Request focus on the username field by default
+        Platform.runLater(usernameTextField::requestFocus);
 
+        // Validate the credentials when the login button is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == loginButtonType) {
+                // You can implement your own logic to validate the credentials against the database
+                String username = usernameTextField.getText();
+                String password = passwordField.getText();
+                // Check if the username and password belong to a doctor
+                boolean isValidDoctor = validateDoctorCredentials(username, password);
+                if (isValidDoctor) {
+                    // Allow login
+                    return true;
+                } else {
+                    // Deny login
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Login Error");
+                    alert.setHeaderText("Invalid Credentials");
+                    alert.setContentText("Only doctors are allowed to log in.");
+                    alert.showAndWait();
+                    return false;
+                }
+            }
+            return null;
+        });
 
-        public ObservableValue<String> reportTextProperty() {
-            return new SimpleStringProperty(reportText);
-        }
+        dialog.showAndWait();
     }
 
-    // Sample User class
-    public static class User {
-        private  int id;
-
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getEmail() {
-            return email;
-        }
-
-        public void setEmail(String email) {
-            this.email = email;
-        }
-
-        public Date getDob() {
-            return dob;
-        }
-
-        public void setDob(Date dob) {
-            this.dob = dob;
-        }
-
-        public String getPhone() {
-            return phone;
-        }
-
-        public void setPhone(String phone) {
-            this.phone = phone;
-        }
-
-        public String getBloodGroup() {
-            return bloodGroup;
-        }
-
-        public void setBloodGroup(String bloodGroup) {
-            this.bloodGroup = bloodGroup;
-        }
-
-        public String getAddress() {
-            return address;
-        }
-
-        public void setAddress(String address) {
-            this.address = address;
-        }
-
-        private  String password;
-
-        private  String type;
-        private  String name;
-        private  String email;
-        private Date dob;
-        private  String phone;
-        private String bloodGroup;
-        private String address;
-
-        public User(int id, String password, String type, String name, String email, Date dob, String phone, String bloodGroup, String address) {
-            this.id = id;
-            this.password = password;
-            this.type = type;
-            this.name = name;
-            this.email = email;
-            this.dob = dob;
-            this.phone = phone;
-            this.bloodGroup = bloodGroup;
-            this.address = address;
-        }
-        // Define user properties and constructor here
+    // Method to validate doctor credentials against the database
+    private boolean validateDoctorCredentials(String username, String password) {
+        // You need to implement the logic to validate the credentials against the database
+        // For simplicity, let's assume there is a table named 'doctors' with columns 'email' and 'password'
+        // where the doctor's email and password are stored.
+        // You would execute a SQL query to check if the provided email and password match a record in the 'doctors' table.
+        // If a match is found, return true; otherwise, return false.
+        return true; // Dummy implementation; replace this with your actual logic
     }
+
 
     public static void main(String[] args) {
         launch(args);
