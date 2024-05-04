@@ -55,8 +55,7 @@ public class MedicalApp extends Application {
         try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
                 "root", "");
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT report_text, report_date, users.* FROM report " +
-                     "INNER JOIN users ON report.patient_id = users.id")) {
+             ResultSet rs = stmt.executeQuery("SELECT report_text, report_date, users.* FROM report INNER JOIN users ON report.patient_id = users.id")) {
 
             while (rs.next()) {
                 // Assuming Report and User classes have appropriate constructors
@@ -64,6 +63,7 @@ public class MedicalApp extends Application {
                 User user = new User(rs.getInt("id"), rs.getString("password"), rs.getString("type"),
                         rs.getString("name"), rs.getString("email"), rs.getDate("dob"),
                         rs.getString("phone"), rs.getString("blood_group"), rs.getString("address"));
+//                System.out.println(rs.getString("name"));
                 report.setUser(user);
                 reports.add(report);
             }
@@ -81,7 +81,7 @@ public class MedicalApp extends Application {
             details.append("Report Date: ").append(report.getReportDate()).append("\n");
             if (report.getUser() != null) {
                 User user = report.getUser();
-                details.append("\nUser Details:\n")
+                details.append("\nDetails:\n")
                         .append("Name: ").append(user.getName()).append("\n")
                         .append("Email: ").append(user.getEmail()).append("\n")
                         .append("Date of Birth: ").append(user.getDob()).append("\n")
@@ -215,6 +215,15 @@ public class MedicalApp extends Application {
         private String address;
 
         public User(int id, String password, String type, String name, String email, Date dob, String phone, String bloodGroup, String address) {
+            this.id = id;
+            this.password = password;
+            this.type = type;
+            this.name = name;
+            this.email = email;
+            this.dob = dob;
+            this.phone = phone;
+            this.bloodGroup = bloodGroup;
+            this.address = address;
         }
         // Define user properties and constructor here
     }
