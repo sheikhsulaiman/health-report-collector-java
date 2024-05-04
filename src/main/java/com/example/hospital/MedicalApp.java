@@ -1,7 +1,9 @@
 package com.example.hospital;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -10,11 +12,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.sql.*;
+import java.util.Optional;
 
 public class MedicalApp extends Application {
 
-    private TableView<Report> reportTableView = new TableView<>();
-    private TextArea detailsTextArea = new TextArea();
+    private final TableView<Report> reportTableView = new TableView<>();
+    private final TextArea detailsTextArea = new TextArea();
 
     @Override
     public void start(Stage primaryStage) {
@@ -39,8 +42,16 @@ public class MedicalApp extends Application {
         VBox tableContainer = new VBox();
         tableContainer.getChildren().addAll(new Label("Reports"), reportTableView);
 
+        Button newButton = new Button("New");
+        newButton.setOnAction(e -> showNewReportDialog());
+
+        HBox buttonContainer = new HBox();
+        buttonContainer.getChildren().add(newButton);
+        buttonContainer.setPadding(new Insets(10));
+
         root.setLeft(tableContainer);
         root.setRight(detailsTextArea);
+        root.setTop(buttonContainer);
 
         Scene scene = new Scene(root, 800, 600);
         primaryStage.setScene(scene);
@@ -73,6 +84,22 @@ public class MedicalApp extends Application {
         return reports;
     }
 
+    private void saveReportToDatabase(Report report){
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
+                    "root", "");
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO report (report_text, report_date, patient_id, doctor_id) VALUES (?, ?, ?, ?)");
+            stmt.setString(1, report.getReportText());
+            stmt.setDate(2, new Date(report.getReportDate().getTime()));
+            stmt.setInt(3, report.getPatientId());
+            stmt.setInt(4, report.getDoctorId());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     // Method to display report details in the TextArea
     private void showReportDetails(Report report) {
         if (report != null) {
@@ -95,8 +122,100 @@ public class MedicalApp extends Application {
         }
     }
 
+
+    // Method to show a new report dialog
+    private void showNewReportDialog() {
+        Dialog<Report> dialog = new Dialog<>();
+        dialog.setTitle("New Report");
+        dialog.setHeaderText("Enter Report Details");
+
+        // Set the button types
+        ButtonType submitButtonType = new ButtonType("Submit", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(submitButtonType, ButtonType.CANCEL);
+
+        // Create the report text input field
+
+        TextField patientIdField = new TextField();
+        patientIdField.setPromptText("Patient ID");
+        TextField doctorIdField = new TextField();
+        doctorIdField.setPromptText("Doctor ID");
+        TextArea reportDescriptionField = new TextArea();
+        reportDescriptionField.setPromptText("Report Description");
+
+
+
+        // Enable/Disable submit button depending on whether a report text was entered
+        Button submitButton = (Button) dialog.getDialogPane().lookupButton(submitButtonType);
+        submitButton.setDisable(true);
+
+        // Do some validation (using lambda for simplicity here)
+
+        patientIdField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        doctorIdField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        reportDescriptionField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        // Layout the dialog content
+        VBox content = new VBox();
+        content.getChildren().addAll(new Label("Patient ID:"),patientIdField,new Label("Doctor ID:"),doctorIdField,new Label("Report Description:"),reportDescriptionField);
+        content.setSpacing(10);
+        content.setPadding(new Insets(20));
+
+        dialog.getDialogPane().setContent(content);
+
+        // Request focus on the report text field by default
+        Platform.runLater(patientIdField::requestFocus);
+
+
+        // Convert the result to a report object when the submit button is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == submitButtonType) {
+                Report report = new Report(reportDescriptionField.getText(), new Date(System.currentTimeMillis()));
+                report.setDoctorId(Integer.parseInt(doctorIdField.getText()));
+                report.setPatientId(Integer.parseInt(patientIdField.getText()));
+                return report;}
+            return null;
+        });
+
+        Optional<Report> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            Report newReport = result.get();
+            // Save the new report to the database
+            saveReportToDatabase(newReport);
+            // Add the new report to the table view
+            reportTableView.getItems().add(newReport);
+            }
+        // If user cancelled the dialog
+    }
+
     // Sample Report class
     public static class Report {
+        private int doctorId;
+        private int patientId;
+
+        public int getDoctorId() {
+            return doctorId;
+        }
+
+        public void setDoctorId(int doctorId) {
+            this.doctorId = doctorId;
+        }
+
+        public int getPatientId() {
+            return patientId;
+        }
+
+        public void setPatientId(int patientId) {
+            this.patientId = patientId;
+        }
+
         private final String reportText;
         private final Date reportDate;
         private User user;
