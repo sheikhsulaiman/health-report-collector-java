@@ -20,6 +20,8 @@ public class MedicalApp extends Application {
     DBUtils db = new DBUtils();
     User loggedInUser = null;
 
+
+
     private final TableView<Report> reportTableView = new TableView<>();
     private final TextArea detailsTextArea = new TextArea();
 
@@ -46,7 +48,7 @@ public class MedicalApp extends Application {
         VBox tableContainer = new VBox();
         tableContainer.getChildren().addAll(new Label("Reports"), reportTableView);
 
-        Button newButton = new Button("New");
+        Button newButton = new Button("New Report");
         newButton.setOnAction(e -> {
             if (loggedInUser != null) {
                 showNewReportDialog();
@@ -55,9 +57,18 @@ public class MedicalApp extends Application {
             }
         });
 
-        Button loginButton = new Button("LogIn");
 
-        loginButton.setOnAction(e -> showLoginDialog());
+
+        Button loginButton = new Button("Authenticate");
+
+        loginButton.setOnAction(e ->
+                {
+                    if (loggedInUser == null) {
+                        showLoginDialog();
+                    } else {
+                        showLogoutDialog();
+                    }
+                });
 
 
         HBox buttonContainer = new HBox();
@@ -272,6 +283,24 @@ public class MedicalApp extends Application {
         dialog.showAndWait();
     }
 
+    private void showLogoutDialog() {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Logout");
+        dialog.setHeaderText("Are you sure you want to logout?");
+        ButtonType logoutButtonType = new ButtonType("Logout", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(logoutButtonType, ButtonType.CANCEL);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == logoutButtonType) {
+                // Logout the user
+                loggedInUser = null;
+                return true;
+            }
+            return false;
+        });
+
+        dialog.showAndWait();
+    }
     // Method to validate doctor credentials against the database
     private boolean validateDoctorCredentials(String email, String password) {
         // You need to implement the logic to validate the credentials against the database
