@@ -5,6 +5,17 @@ import java.sql.Date;
 public  class User {
     private  int id;
 
+    public User(int id, String name, String email, String phone, String address, Date dob, String bloodGroup, String type) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+        this.dob = dob;
+        this.bloodGroup = bloodGroup;
+        this.type = type;
+    }
+
     public int getId() {
         return id;
     }

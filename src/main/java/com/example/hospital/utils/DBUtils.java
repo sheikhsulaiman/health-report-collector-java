@@ -65,4 +65,74 @@ public class DBUtils {
         return reports;
     }
 
+    public void saveUserToDatabase(User user) {
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
+                    "root", "");
+            PreparedStatement stmt = conn.prepareStatement("INSERT INTO users (name, email, password, dob, phone, blood_group, address, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            stmt.setString(1, user.getName());
+            stmt.setString(2, user.getEmail());
+            stmt.setString(3, user.getPassword());
+            stmt.setDate(4, new Date(user.getDob().getTime()));
+            stmt.setString(5, user.getPhone());
+            stmt.setString(6, user.getBloodGroup());
+            stmt.setString(7, user.getAddress());
+            stmt.setString(8, user.getType());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public User fetchUserFromDatabase(String email, String password) {
+        User user = null;
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
+                "root", "");
+             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE email = ? AND password = ?")) {
+            stmt.setString(1, email);
+            stmt.setString(2, password);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                user = new User(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getDate("dob"),
+                        rs.getString("blood_group"),
+                        rs.getString("type")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return user;
+    }
+
+    public User fetchDoctorUserFromDatabase(String email, String password) {
+        User user = null;
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/medifire",
+                "root", "");
+             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE email = ? AND password = ? AND type = 'doctor'")) {
+            stmt.setString(1, email);
+            stmt.setString(2, password);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                user = new User(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getDate("dob"),
+                        rs.getString("blood_group"),
+                        rs.getString("type")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return user;
+    }
 }

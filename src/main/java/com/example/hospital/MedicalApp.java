@@ -18,6 +18,7 @@ import java.util.Optional;
 public class MedicalApp extends Application {
 
     DBUtils db = new DBUtils();
+    User loggedInUser = null;
 
     private final TableView<Report> reportTableView = new TableView<>();
     private final TextArea detailsTextArea = new TextArea();
@@ -46,7 +47,13 @@ public class MedicalApp extends Application {
         tableContainer.getChildren().addAll(new Label("Reports"), reportTableView);
 
         Button newButton = new Button("New");
-        newButton.setOnAction(e -> showNewReportDialog());
+        newButton.setOnAction(e -> {
+            if (loggedInUser != null) {
+                showNewReportDialog();
+            } else {
+                showLoginDialog();
+            }
+        });
 
         Button loginButton = new Button("LogIn");
 
@@ -117,10 +124,13 @@ public class MedicalApp extends Application {
 
         // Create the report text input field
 
-        TextField patientIdField = new TextField();
-        patientIdField.setPromptText("Patient ID");
-        TextField doctorIdField = new TextField();
-        doctorIdField.setPromptText("Doctor ID");
+        TextField patientEmailField = new TextField();
+        patientEmailField.setPromptText("Patient Email");
+
+        TextField patientPasswordField = new TextField();
+        patientPasswordField.setPromptText("Patient Password");
+
+
         TextArea reportDescriptionField = new TextArea();
         reportDescriptionField.setPromptText("Report Description");
 
@@ -132,11 +142,11 @@ public class MedicalApp extends Application {
 
         // Do some validation (using lambda for simplicity here)
 
-        patientIdField.textProperty().addListener((observable, oldValue, newValue) -> {
+        patientEmailField.textProperty().addListener((observable, oldValue, newValue) -> {
             submitButton.setDisable(newValue.trim().isEmpty());
         });
 
-        doctorIdField.textProperty().addListener((observable, oldValue, newValue) -> {
+        patientPasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
             submitButton.setDisable(newValue.trim().isEmpty());
         });
 
@@ -146,23 +156,38 @@ public class MedicalApp extends Application {
 
         // Layout the dialog content
         VBox content = new VBox();
-        content.getChildren().addAll(new Label("Patient ID:"),patientIdField,new Label("Doctor ID:"),doctorIdField,new Label("Report Description:"),reportDescriptionField);
+        content.getChildren().addAll(new Label("Patient Email:"),patientEmailField,new Label("Patient Password:"),patientPasswordField, new Label("Report Description:"),reportDescriptionField);
         content.setSpacing(10);
         content.setPadding(new Insets(20));
 
         dialog.getDialogPane().setContent(content);
 
         // Request focus on the report text field by default
-        Platform.runLater(patientIdField::requestFocus);
+        Platform.runLater(patientEmailField::requestFocus);
 
 
         // Convert the result to a report object when the submit button is clicked
         dialog.setResultConverter(dialogButton -> {
+            if(loggedInUser == null){return  null;}
             if (dialogButton == submitButtonType) {
                 Report report = new Report(reportDescriptionField.getText(), new Date(System.currentTimeMillis()));
-                report.setDoctorId(Integer.parseInt(doctorIdField.getText()));
-                report.setPatientId(Integer.parseInt(patientIdField.getText()));
-                return report;}
+                report.setDoctor(loggedInUser);
+                User patient = db.fetchUserFromDatabase(patientEmailField.getText(),patientPasswordField.getText());
+                if(patient != null){
+                    report.setPatient(patient);
+                    return report;
+                }
+                else{
+                    // Deny creating the report
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Login Error");
+                    alert.setHeaderText("Invalid Credentials");
+                    alert.setContentText("No valid patient is available against your provided email and password, or try to create a patient first.");
+                    alert.showAndWait();
+                    return null;
+                }
+
+            }
             return null;
         });
 
@@ -189,8 +214,8 @@ public class MedicalApp extends Application {
         dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
 
         // Create the username and password input fields
-        TextField usernameTextField = new TextField();
-        usernameTextField.setPromptText("Username (Email)");
+        TextField eamilTextField = new TextField();
+        eamilTextField.setPromptText("Username (Email)");
 
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password");
@@ -200,17 +225,17 @@ public class MedicalApp extends Application {
         loginButton.setDisable(true);
 
         // Do some validation (using lambda for simplicity)
-        usernameTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+        eamilTextField.textProperty().addListener((observable, oldValue, newValue) -> {
             loginButton.setDisable(newValue.trim().isEmpty() || passwordField.getText().trim().isEmpty());
         });
 
         passwordField.textProperty().addListener((observable, oldValue, newValue) -> {
-            loginButton.setDisable(newValue.trim().isEmpty() || usernameTextField.getText().trim().isEmpty());
+            loginButton.setDisable(newValue.trim().isEmpty() || eamilTextField.getText().trim().isEmpty());
         });
 
         // Layout the dialog content
         VBox content = new VBox();
-        content.getChildren().addAll(new Label("Username:"), usernameTextField,
+        content.getChildren().addAll(new Label("Username:"), eamilTextField,
                 new Label("Password:"), passwordField);
         content.setSpacing(10);
         content.setPadding(new Insets(20));
@@ -218,16 +243,16 @@ public class MedicalApp extends Application {
         dialog.getDialogPane().setContent(content);
 
         // Request focus on the username field by default
-        Platform.runLater(usernameTextField::requestFocus);
+        Platform.runLater(eamilTextField::requestFocus);
 
         // Validate the credentials when the login button is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == loginButtonType) {
                 // You can implement your own logic to validate the credentials against the database
-                String username = usernameTextField.getText();
+                String email = eamilTextField.getText();
                 String password = passwordField.getText();
                 // Check if the username and password belong to a doctor
-                boolean isValidDoctor = validateDoctorCredentials(username, password);
+                boolean isValidDoctor = validateDoctorCredentials(email, password);
                 if (isValidDoctor) {
                     // Allow login
                     return true;
@@ -248,13 +273,20 @@ public class MedicalApp extends Application {
     }
 
     // Method to validate doctor credentials against the database
-    private boolean validateDoctorCredentials(String username, String password) {
+    private boolean validateDoctorCredentials(String email, String password) {
         // You need to implement the logic to validate the credentials against the database
         // For simplicity, let's assume there is a table named 'doctors' with columns 'email' and 'password'
         // where the doctor's email and password are stored.
         // You would execute a SQL query to check if the provided email and password match a record in the 'doctors' table.
         // If a match is found, return true; otherwise, return false.
-        return true; // Dummy implementation; replace this with your actual logic
+        User user = db.fetchDoctorUserFromDatabase(email, password);
+        if(user != null){
+            loggedInUser = user;
+            return true;
+        }else {
+            return false;
+        }
+         // Dummy implementation; replace this with your actual logic
     }
 
 
