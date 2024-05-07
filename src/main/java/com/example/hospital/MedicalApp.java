@@ -181,19 +181,18 @@ public class MedicalApp extends Application {
         dialog.setResultConverter(dialogButton -> {
             if(loggedInUser == null){return  null;}
             if (dialogButton == submitButtonType) {
-                Report report = new Report(reportDescriptionField.getText(), new Date(System.currentTimeMillis()));
-                report.setDoctor(loggedInUser);
+
                 User patient = db.fetchUserFromDatabase(patientEmailField.getText(),patientPasswordField.getText());
                 if(patient != null){
-                    report.setPatient(patient);
-                    return report;
+                    // Allow creating the report
+                    return new Report(reportDescriptionField.getText(), new Date(System.currentTimeMillis()), patient, loggedInUser);
                 }
                 else{
                     // Deny creating the report
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Login Error");
                     alert.setHeaderText("Invalid Credentials");
-                    alert.setContentText("No valid patient is available against your provided email and password, or try to create a patient first.");
+                    alert.setContentText("No valid patient is available against your provided email and password, Try again or try to create a patient first.");
                     alert.showAndWait();
                     return null;
                 }
@@ -211,6 +210,7 @@ public class MedicalApp extends Application {
             reportTableView.getItems().add(newReport);
             }
         // If user cancelled the dialog
+
     }
 
 

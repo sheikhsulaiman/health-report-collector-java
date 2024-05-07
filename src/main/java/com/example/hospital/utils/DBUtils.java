@@ -34,8 +34,7 @@ public class DBUtils {
 
             while (rs.next()) {
                 // Assuming Report and User classes have appropriate constructors
-                Report report = new Report(rs.getString("report_text"), rs.getDate("report_date"));
-                report.setReportId(rs.getInt("report_id"));
+
                 User doctor = new User(
                         rs.getInt("doctor_id"),
                         rs.getString("doctor_name"),
@@ -55,8 +54,13 @@ public class DBUtils {
                         rs.getDate("patient_dob"),
                         rs.getString("patient_blood_group")
                 );
-                report.setPatient(patient);
-                report.setDoctor(doctor);
+                Report report = new Report(
+                        rs.getInt("report_id"),
+                        rs.getString("report_text"),
+                        rs.getDate("report_date"),
+                        patient,
+                        doctor
+                );
                 reports.add(report);
             }
         } catch (SQLException e) {

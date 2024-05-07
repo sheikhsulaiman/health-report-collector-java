@@ -7,6 +7,10 @@ import java.sql.Date;
 
 public class Report {
     private int reportId;
+    private User patient;
+    private User doctor;
+    private final String reportText;
+    private final Date reportDate;
 
     public void setReportId(int reportId) {
         this.reportId = reportId;
@@ -16,29 +20,15 @@ public class Report {
         return reportId;
     }
 
-    private int doctorId;
-    private int patientId;
-
     public int getDoctorId() {
-        return doctorId;
+        return doctor.getId();
     }
 
-    public void setDoctorId(int doctorId) {
-        this.doctorId = doctorId;
-    }
+      public int getPatientId() {
+            return patient.getId();
+        }
 
-    public int getPatientId() {
-        return patientId;
-    }
 
-    public void setPatientId(int patientId) {
-        this.patientId = patientId;
-    }
-
-    private final String reportText;
-    private final Date reportDate;
-    private User patient;
-    private User doctor;
 
     public User getDoctor() {
         return doctor;
@@ -48,16 +38,20 @@ public class Report {
         this.doctor = doctor;
     }
 
-    public Report(int reportId,String reportText, Date reportDate) {
+    public Report(int reportId,String reportText, Date reportDate,User patient, User doctor) {
         this.reportId = reportId;
         this.reportText = reportText;
         this.reportDate = reportDate;
+        this.patient = patient;
+        this.doctor = doctor;
     }
 
-    public Report(String reportText, Date reportDate) {
+    public Report(String reportText, Date reportDate , User patient, User doctor) {
 
         this.reportText = reportText;
         this.reportDate = reportDate;
+        this.patient = patient;
+        this.doctor = doctor;
     }
 
     public String getReportText() {
