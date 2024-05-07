@@ -138,7 +138,7 @@ public class MedicalApp extends Application {
         TextField patientEmailField = new TextField();
         patientEmailField.setPromptText("Patient Email");
 
-        TextField patientPasswordField = new TextField();
+        TextField patientPasswordField = new PasswordField();
         patientPasswordField.setPromptText("Patient Password");
 
 
@@ -226,7 +226,7 @@ public class MedicalApp extends Application {
 
         // Create the username and password input fields
         TextField eamilTextField = new TextField();
-        eamilTextField.setPromptText("Username (Email)");
+        eamilTextField.setPromptText("Email");
 
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password");
