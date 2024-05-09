@@ -16,6 +16,18 @@ public  class User {
         this.type = type;
     }
 
+    public User(String name, String email,String password, String phone, String address, Date dob, String bloodGroup, String type) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.phone = phone;
+        this.address = address;
+        this.dob = dob;
+        this.bloodGroup = bloodGroup;
+        this.type = type;
+    }
+
+
     public int getId() {
         return id;
     }

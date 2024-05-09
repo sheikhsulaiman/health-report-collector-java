@@ -12,8 +12,9 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.collections.ObservableList;
 
-import java.sql.*;
+import java.sql.Date;
 import java.util.Optional;
+
 
 public class MedicalApp extends Application {
 
@@ -57,6 +58,15 @@ public class MedicalApp extends Application {
             }
         });
 
+        Button newPatientButton = new Button("New Patient");
+        newPatientButton.setOnAction(e -> {
+            if (loggedInUser != null) {
+                showNewPatientDialog();
+            } else {
+                showLoginDialog();
+            }
+        });
+
 
 
         Button loginButton = new Button("Authenticate");
@@ -72,7 +82,7 @@ public class MedicalApp extends Application {
 
 
         HBox buttonContainer = new HBox();
-        buttonContainer.getChildren().addAll(newButton,loginButton);
+        buttonContainer.getChildren().addAll(newButton,newPatientButton,loginButton);
         buttonContainer.setSpacing(10);
         buttonContainer.setPadding(new Insets(10));
 
@@ -86,7 +96,109 @@ public class MedicalApp extends Application {
         primaryStage.show();
     }
 
+    private void showNewPatientDialog() {
+        Dialog<User> dialog = new Dialog<>();
+        dialog.setTitle("New Patient");
+        dialog.setHeaderText("Enter Patient Details");
 
+        // Set the button types
+        ButtonType submitButtonType = new ButtonType("Submit", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(submitButtonType, ButtonType.CANCEL);
+
+        // Create the report text input field
+
+        TextField patientNameField = new TextField();
+        patientNameField.setPromptText("Patient Name");
+
+        TextField patientEmailField = new TextField();
+        patientEmailField.setPromptText("Patient Email");
+
+        TextField patientPasswordField = new PasswordField();
+        patientPasswordField.setPromptText("Patient Password");
+
+        TextField patientPhoneField = new TextField();
+        patientPhoneField.setPromptText("Patient Phone");
+
+        TextField patientBloodGroupField = new TextField();
+        patientBloodGroupField.setPromptText("Patient Blood Group");
+
+        TextField patientAddressField = new TextField();
+        patientAddressField.setPromptText("Patient Address");
+
+        DatePicker patientDobField = new DatePicker();
+        patientDobField.setPromptText("Patient Date of Birth");
+
+        // Enable/Disable submit button depending on whether a report text was entered
+        Button submitButton = (Button) dialog.getDialogPane().lookupButton(submitButtonType);
+        submitButton.setDisable(true);
+
+        // Do some validation (using lambda for simplicity here)
+
+        patientNameField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientEmailField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientPasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientPhoneField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientBloodGroupField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientAddressField.textProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue.trim().isEmpty());
+        });
+
+        patientDobField.valueProperty().addListener((observable, oldValue, newValue) -> {
+            submitButton.setDisable(newValue == null);
+        });
+
+        // Layout the dialog content
+        VBox content = new VBox();
+
+        content.getChildren().addAll(new Label("Patient Name:"),patientNameField,new Label("Patient Email:"),patientEmailField,new Label("Patient Password:"),patientPasswordField,new Label("Patient Phone:"),patientPhoneField,new Label("Patient Blood Group:"),patientBloodGroupField,new Label("Patient Address:"),patientAddressField,new Label("Patient Date of Birth:"),patientDobField);
+        content.setSpacing(10);
+        content.setPadding(new Insets(20));
+
+        dialog.getDialogPane().setContent(content);
+        dialog.show();
+
+        // Request focus on the report text field by default
+        Platform.runLater(patientNameField::requestFocus);
+
+        // Convert the result to a report object when the submit button is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == submitButtonType) {
+
+                User user = new User(patientNameField.getText(),patientEmailField.getText(),patientPasswordField.getText(),patientPhoneField.getText(),patientAddressField.getText(),java.sql.Date.valueOf(patientDobField.getValue()),patientBloodGroupField.getText(),"patient");
+                db.saveUserToDatabase(user);
+                User newUser = db.fetchUserFromDatabase(patientEmailField.getText(),patientPasswordField.getText());
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Success");
+                alert.setHeaderText("Patient Created Successfully");
+                alert.setContentText("Patient has been created successfully.");
+                alert.showAndWait();
+                return newUser;
+            }
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Patient Creation Failed");
+            alert.setContentText("Patient creation failed. Please try again.");
+            alert.showAndWait();
+            return null;
+        });
+    }
+
+    // Method to show OTP varification dialog
 
 
     // Method to display report details in the TextArea
@@ -185,6 +297,11 @@ public class MedicalApp extends Application {
                 User patient = db.fetchUserFromDatabase(patientEmailField.getText(),patientPasswordField.getText());
                 if(patient != null){
                     // Allow creating the report
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Success");
+                    alert.setHeaderText("Report Created Successfully");
+                    alert.setContentText("Report has been created successfully.");
+                    alert.showAndWait();
                     return new Report(reportDescriptionField.getText(), new Date(System.currentTimeMillis()), patient, loggedInUser);
                 }
                 else{
@@ -211,6 +328,7 @@ public class MedicalApp extends Application {
             }
         // If user cancelled the dialog
 
+
     }
 
 
@@ -231,13 +349,19 @@ public class MedicalApp extends Application {
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Password");
 
+
+
+
+
         // Enable/Disable login button depending on whether username and password were entered
         Button loginButton = (Button) dialog.getDialogPane().lookupButton(loginButtonType);
         loginButton.setDisable(true);
 
+
         // Do some validation (using lambda for simplicity)
         eamilTextField.textProperty().addListener((observable, oldValue, newValue) -> {
             loginButton.setDisable(newValue.trim().isEmpty() || passwordField.getText().trim().isEmpty());
+
         });
 
         passwordField.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -246,7 +370,7 @@ public class MedicalApp extends Application {
 
         // Layout the dialog content
         VBox content = new VBox();
-        content.getChildren().addAll(new Label("Username:"), eamilTextField,
+        content.getChildren().addAll(new Label("Email:"), eamilTextField,
                 new Label("Password:"), passwordField);
         content.setSpacing(10);
         content.setPadding(new Insets(20));
